@@ -54,10 +54,19 @@ with st.sidebar:
     # Load data button
     if st.button("Load Data"):
         with st.spinner("Loading data..."):
+            # Reset the platform and metric selection to make sure we get fresh data
+            if 'selected_platform' in st.session_state:
+                del st.session_state.selected_platform
+            if 'selected_metric' in st.session_state:
+                del st.session_state.selected_metric
+                
             data = get_data_from_source(st.session_state.data_sources[data_source])
             # Save the current data source configuration for later use
             st.session_state.current_data_source = st.session_state.data_sources[data_source]
             st.session_state.current_data = data
+            st.session_state.current_visualization = True
+            st.session_state.current_visualization_type = 'trend'
+            st.session_state.current_chart_type = 'line'
             st.session_state.last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.success(f"Data loaded successfully at {st.session_state.last_update}")
             

@@ -202,6 +202,27 @@ def generate_simulated_data(config):
         platform = st.sidebar.selectbox("Select Platform", config["platforms"])
         metric = st.sidebar.selectbox("Select Metric", config["metrics"])
         
+        # Store the selected platform and metric in session state
+        if 'selected_platform' not in st.session_state:
+            st.session_state.selected_platform = platform
+        elif platform != st.session_state.selected_platform:
+            # Update the stored platform if it's different
+            st.session_state.selected_platform = platform
+            # Force a reload of data
+            st.rerun()
+            
+        if 'selected_metric' not in st.session_state:
+            st.session_state.selected_metric = metric
+        elif metric != st.session_state.selected_metric:
+            # Update the stored metric if it's different
+            st.session_state.selected_metric = metric
+            # Force a reload of data
+            st.rerun()
+            
+        # Use the stored platform and metric
+        platform = st.session_state.selected_platform
+        metric = st.session_state.selected_metric
+            
         # Reset random seed to ensure different platforms generate different data
         # while keeping them consistent between runs
         platform_seed_map = {
