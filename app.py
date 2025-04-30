@@ -90,17 +90,24 @@ data_source = st.sidebar.selectbox(
 # Load data button
 if st.sidebar.button("Load Data"):
     with st.spinner("Loading data..."):
-        # Reset the platform and metric selection to make sure we get fresh data
-        if 'selected_platform' in st.session_state:
-            del st.session_state.selected_platform
-        if 'selected_metric' in st.session_state:
-            del st.session_state.selected_metric
-            
+        # Don't reset the platform and metric selection
+        # This was causing the issue where platform selection was not working
+        
         data = get_data_from_source(st.session_state.data_sources[data_source])
         # Save the current data source configuration for later use
         st.session_state.current_data_source = st.session_state.data_sources[data_source]
         st.session_state.current_data = data
         st.session_state.last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Make sure platform and metric are stored in the trend_analysis
+        if "platform" in data.columns and len(data) > 0:
+            platform = data["platform"].iloc[0]
+            metric = data["metric"].iloc[0] if "metric" in data.columns else "Unknown"
+            
+            if "selected_platform" not in st.session_state:
+                st.session_state.selected_platform = platform
+            if "selected_metric" not in st.session_state:
+                st.session_state.selected_metric = metric
         
         # Generate trend analysis
         st.session_state.trend_analysis = analyze_trend_data(data)

@@ -118,8 +118,14 @@ def get_stock_data(config):
         "Volume": "volume"
     })
     
-    # Add a value column (use adjusted close)
-    data["value"] = data["adj_close"]
+    # Add a value column (use adjusted close or close if adj_close is not available)
+    if "adj_close" in data.columns:
+        data["value"] = data["adj_close"]
+    elif "Adj Close" in data.columns:
+        data["value"] = data["Adj Close"]
+    else:
+        # Fallback to regular close if adjusted close is not available
+        data["value"] = data["close"] if "close" in data.columns else data["Close"]
     
     # Add metadata columns
     data["ticker"] = ticker
