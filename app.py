@@ -63,7 +63,9 @@ apply_theme(st.session_state.dark_mode)
 
 # Sidebar for data source selection and controls
 st.sidebar.title("TrendVision AI")
-st.sidebar.image("https://img.icons8.com/fluency/96/000000/trend.png", width=80)
+# Use a data URL for the icon to avoid external dependencies
+trend_icon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjMDA4MGZmIj48cGF0aCBkPSJNNDk2IDM4NGgtMTYwdi02NGgxNjBjOC44IDAgMTYtNy4yIDE2LTE2di0zMmMwLTguOC03LjItMTYtMTYtMTZoLTE2MHYtNjRoMTYwYzguOCAwIDE2LTcuMiAxNi0xNnYtMzJjMC04LjgtNy4yLTE2LTE2LTE2SDMwNFY2NGMwLTguOC03LjItMTYtMTYtMTZoLTMyYy04LjggMC0xNiA3LjItMTYgMTZ2NjRIMTZjLTguOCAwLTE2IDcuMi0xNiAxNnYzMmMwIDguOCA3LjIgMTYgMTYgMTZoMjI0djY0SDE2Yy04LjggMC0xNiA3LjItMTYgMTZ2MzJjMCA4LjggNy4yIDE2IDE2IDE2aDIyNHY2NEgyMTZjLTguOCAwLTE2IDcuMi0xNiAxNnYzMmMwIDguOCA3LjIgMTYgMTYgMTZoMjgwYzguOCAwIDE2LTcuMiAxNi0xNnYtMzJjMC04LjgtNy4yLTE2LTE2LTE2eiIvPjwvc3ZnPg=="
+st.sidebar.image(trend_icon, width=80)
 
 st.sidebar.header("Data Source")
 # Data source selection
@@ -177,21 +179,17 @@ if dark_mode != st.session_state.dark_mode:
     apply_theme(dark_mode)
     st.rerun()
 
-# API key management
-with st.sidebar.expander("API Keys"):
-    openai_key = st.text_input("OpenAI API Key", type="password", help="Enter your OpenAI API key for AI content suggestions")
-    if openai_key:
-        st.session_state.OPENAI_API_KEY = openai_key
-        st.session_state.api_available = check_ai_availability()
+# About section with app info
+with st.sidebar.expander("About"):
+    st.markdown("""
+    **TrendVision AI** helps social media creators and marketers identify trends,
+    analyze performance data, and generate content ideas tailored to
+    specific platforms and objectives.
     
-    anthropic_key = st.text_input("Anthropic API Key", type="password", help="Enter your Anthropic API key for AI content suggestions")
-    if anthropic_key:
-        st.session_state.ANTHROPIC_API_KEY = anthropic_key
-        st.session_state.api_available = check_ai_availability()
+    Built with Streamlit and powered by Anthropic Claude AI.
     
-    if st.button("Save API Keys"):
-        st.session_state.api_available = check_ai_availability()
-        st.success("API keys saved successfully!")
+    Version: 1.0.0
+    """)
 
 # Main content area
 if st.session_state.current_data is None:
@@ -226,7 +224,7 @@ if st.session_state.current_data is None:
         
         For the best experience, connect your own data sources or use our simulations to explore different platforms.
         
-        Need AI-powered suggestions? Add your OpenAI or Anthropic API key in the Settings panel.
+        AI-powered content suggestions are available to help you create engaging content for your chosen platform.
         """)
     
     # Features showcase
