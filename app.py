@@ -57,6 +57,18 @@ if "last_update" not in st.session_state:
 
 if "api_available" not in st.session_state:
     st.session_state.api_available = check_ai_availability()
+    
+# User session management
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
+    
+if "last_login" not in st.session_state:
+    st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+else:
+    # Update last login only if it's a new session (app reload)
+    if st.session_state.get("_is_new_session", True):
+        st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state._is_new_session = False
 
 # Apply theme based on dark mode setting
 apply_theme(st.session_state.dark_mode)
@@ -172,6 +184,14 @@ else:
 # Settings section
 st.sidebar.header("Settings")
 
+# User profile section
+user_name = st.sidebar.text_input("Your Name", value=st.session_state.user_name, 
+                                 placeholder="Enter your name",
+                                 help="Personalize your dashboard")
+if user_name != st.session_state.user_name:
+    st.session_state.user_name = user_name
+    st.rerun()
+
 # Dark mode toggle
 dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
 if dark_mode != st.session_state.dark_mode:
@@ -193,8 +213,28 @@ with st.sidebar.expander("About"):
 
 # Main content area
 if st.session_state.current_data is None:
-    # Welcome screen with introduction
-    st.title("Welcome to TrendVision AI")
+    # Welcome screen with introduction and personalized greeting
+    if st.session_state.user_name:
+        st.title(f"Welcome back, {st.session_state.user_name}! 👋")
+        
+        # Show last login info
+        last_login_date = datetime.strptime(st.session_state.last_login, "%Y-%m-%d %H:%M:%S")
+        current_time = datetime.now()
+        time_diff = current_time - last_login_date
+        
+        if time_diff.days > 0:
+            time_msg = f"{time_diff.days} days ago"
+        elif time_diff.seconds // 3600 > 0:
+            time_msg = f"{time_diff.seconds // 3600} hours ago"
+        elif time_diff.seconds // 60 > 0:
+            time_msg = f"{time_diff.seconds // 60} minutes ago"
+        else:
+            time_msg = "just now"
+            
+        st.caption(f"Last login: {time_msg}")
+    else:
+        st.title("Welcome to TrendVision AI")
+    
     st.subheader("Social Media Trend Analysis & Content Idea Generator")
     
     col1, col2 = st.columns(2)
@@ -254,7 +294,11 @@ if st.session_state.current_data is None:
 
 else:
     # Display data analysis and trend insights
-    st.title("Social Media Trend Analysis")
+    if st.session_state.user_name:
+        # Personalized header for returning users with data loaded
+        st.title(f"{st.session_state.user_name}'s Social Media Trend Analysis")
+    else:
+        st.title("Social Media Trend Analysis")
     
     # Get the data to display
     data_to_display = st.session_state.filtered_data if 'filtered_data' in st.session_state else st.session_state.current_data
