@@ -4,11 +4,12 @@ address = "0.0.0.0"
 port = 5000
 
 [theme]
-primaryColor = "#FF4B4B"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
+base = "light"
+primaryColor = "#00b4ff"
+backgroundColor = "#f6f9fc"
+secondaryBackgroundColor = "#e8f2fa"
+textColor = "#1e2732"
 font = "sans serif"
 
-[runner]
-fastReruns = true
+[deprecation]
+showPyplotGlobalUse = false

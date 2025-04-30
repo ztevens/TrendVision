@@ -1,216 +1,176 @@
 """
-TrendVision AI - Social Media Trend Analysis and Content Ideation Platform
+TrendVision AI - Social Media Content Ideas Generator
 
-This application helps social media creators and marketers identify trends,
-analyze their performance data, and generate content ideas tailored to
-their specific platforms and objectives.
+This application helps social media creators and marketers generate high-quality
+content ideas tailored to their specific platforms and objectives.
 """
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import json
 import os
+import streamlit as st
+from datetime import datetime
+import io
+import base64
+import random
 
-# Import local modules
-from data_sources import load_data_sources, get_data_from_source, handle_uploaded_data
-from data_processor import process_data, filter_data
-from visualization import create_visualization
-from forecasting import forecast_trend
+# Import modules
+from utils import apply_theme
+from data_sources import load_data_sources, get_data_from_source
+from data_processor import filter_data
 from trend_analyzer import analyze_trend_data
 from ai_content_generator import generate_content_ideas_with_ai, check_ai_availability
-from utils import format_large_number, export_data, apply_theme
 
-# App configuration
+# Set page config
 st.set_page_config(
     page_title="TrendVision AI",
-    page_icon="📊",
+    page_icon="📱",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state variables
-if "data_sources" not in st.session_state:
-    # Load predefined data sources
-    st.session_state.data_sources = load_data_sources()
-
-if "current_data" not in st.session_state:
-    st.session_state.current_data = None
-
-if "forecast_data" not in st.session_state:
-    st.session_state.forecast_data = None
-
-if "trend_analysis" not in st.session_state:
-    st.session_state.trend_analysis = None
-
-if "content_ideas" not in st.session_state:
-    st.session_state.content_ideas = None
-
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-if "last_update" not in st.session_state:
-    st.session_state.last_update = None
-
-if "api_available" not in st.session_state:
-    st.session_state.api_available = check_ai_availability()
-    
-# User session management
-if "user_name" not in st.session_state:
+# Initialize session state variables if they don't exist
+if 'user_name' not in st.session_state:
     st.session_state.user_name = ""
-    
-if "last_login" not in st.session_state:
+if 'email' not in st.session_state:
+    st.session_state.email = ""
+if 'is_logged_in' not in st.session_state:
+    st.session_state.is_logged_in = False
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+if 'data_sources' not in st.session_state:
+    st.session_state.data_sources = load_data_sources()
+if 'current_data' not in st.session_state:
+    st.session_state.current_data = None
+if 'trend_analysis' not in st.session_state:
+    st.session_state.trend_analysis = None
+if 'content_ideas' not in st.session_state:
+    st.session_state.content_ideas = None
+if 'last_update' not in st.session_state:
+    st.session_state.last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+if 'last_login' not in st.session_state:
     st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-else:
-    # Update last login only if it's a new session (app reload)
-    if st.session_state.get("_is_new_session", True):
-        st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        st.session_state._is_new_session = False
+if 'current_data_source' not in st.session_state:
+    st.session_state.current_data_source = None
+if 'selected_platform' not in st.session_state:
+    st.session_state.selected_platform = "Instagram"
+if 'selected_metric' not in st.session_state:
+    st.session_state.selected_metric = "Engagement"
 
 # Apply theme based on dark mode setting
 apply_theme(st.session_state.dark_mode)
 
-# Sidebar for data source selection and controls
-st.sidebar.title("TrendVision AI")
-# Use a data URL for the icon to avoid external dependencies
-trend_icon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjMDA4MGZmIj48cGF0aCBkPSJNNDk2IDM4NGgtMTYwdi02NGgxNjBjOC44IDAgMTYtNy4yIDE2LTE2di0zMmMwLTguOC03LjItMTYtMTYtMTZoLTE2MHYtNjRoMTYwYzguOCAwIDE2LTcuMiAxNi0xNnYtMzJjMC04LjgtNy4yLTE2LTE2LTE2SDMwNFY2NGMwLTguOC03LjItMTYtMTYtMTZoLTMyYy04LjggMC0xNiA3LjItMTYgMTZ2NjRIMTZjLTguOCAwLTE2IDcuMi0xNiAxNnYzMmMwIDguOCA3LjIgMTYgMTYgMTZoMjI0djY0SDE2Yy04LjggMC0xNiA3LjItMTYgMTZ2MzJjMCA4LjggNy4yIDE2IDE2IDE2aDIyNHY2NEgyMTZjLTguOCAwLTE2IDcuMi0xNiAxNnYzMmMwIDguOCA3LjIgMTYgMTYgMTZoMjgwYzguOCAwIDE2LTcuMiAxNi0xNnYtMzJjMC04LjgtNy4yLTE2LTE2LTE2eiIvPjwvc3ZnPg=="
+# Sidebar for user account and settings
+# Create an SVG icon for the app
+trend_icon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjMDBiNGZmIj48cGF0aCBkPSJNNDk2IDM4NGgtMTYwdi02NGgxNjBjOC44IDAgMTYtNy4yIDE2LTE2di0zMmMwLTguOC03LjItMTYtMTYtMTZoLTE2MHYtNjRoMTYwYzguOCAwIDE2LTcuMiAxNi0xNnYtMzJjMC04LjgtNy4yLTE2LTE2LTE2SDMwNFY2NGMwLTguOC03LjItMTYtMTYtMTZoLTMyYy04LjggMC0xNiA3LjItMTYgMTZ2NjRIMTZjLTguOCAwLTE2IDcuMi0xNiAxNnYzMmMwIDguOCA3LjIgMTYgMTYgMTZoMjI0djY0SDE2Yy04LjggMC0xNiA3LjItMTYgMTZ2MzJjMCA4LjggNy4yIDE2IDE2IDE2aDIyNHY2NEgyMTZjLTguOCAwLTE2IDcuMi0xNiAxNnYzMmMwIDguOCA3LjIgMTYgMTYgMTZoMjgwYzguOCAwIDE2LTcuMiAxNi0xNnYtMzJjMC04LjgtNy4yLTE2LTE2LTE2eiIvPjwvc3ZnPg=="
 st.sidebar.image(trend_icon, width=80)
 
-st.sidebar.header("Data Source")
-# Data source selection
-data_source = st.sidebar.selectbox(
-    "Select Data Source",
-    options=list(st.session_state.data_sources.keys()),
-    index=0
-)
+st.sidebar.header("Account")
 
-# Show additional selectors based on data source
-current_config = st.session_state.data_sources[data_source]
-
-# If Social Media Trends data source is selected, show platform and metric selectors
-if data_source == "Social Media Trends" and "platforms" in current_config and "metrics" in current_config:
-    selected_platform = st.sidebar.selectbox(
-        "Select Platform",
-        options=current_config["platforms"],
-        key="platform_selector"
-    )
-    selected_metric = st.sidebar.selectbox(
-        "Select Metric",
-        options=current_config["metrics"],
-        key="metric_selector"
-    )
+# Login/Registration Form
+if not st.session_state.is_logged_in:
+    login_tab, register_tab = st.sidebar.tabs(["Login", "Register"])
     
-    # Store selections in session state
-    st.session_state.selected_platform = selected_platform
-    st.session_state.selected_metric = selected_metric
-
-# Load data button
-if st.sidebar.button("Load Data"):
-    with st.spinner("Loading data..."):
-        # Get data using the current data source configuration
-        data = get_data_from_source(st.session_state.data_sources[data_source])
+    with login_tab:
+        login_email = st.text_input("Email", key="login_email")
+        login_password = st.text_input("Password", type="password", key="login_password")
         
-        # Save the current data source configuration for later use
-        st.session_state.current_data_source = st.session_state.data_sources[data_source]
-        st.session_state.current_data = data
-        st.session_state.last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if st.button("Sign In", key="signin_button"):
+            # Simple mock login - in a real app, you would check credentials in a database
+            st.session_state.user_name = "User" # Would get this from the database
+            st.session_state.email = login_email
+            st.session_state.is_logged_in = True
+            st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.rerun()
+    
+    with register_tab:
+        new_name = st.text_input("Full Name", key="register_name")
+        new_email = st.text_input("Email", key="register_email")
+        new_password = st.text_input("Password", type="password", key="register_password")
+        confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
         
-        # Generate trend analysis
-        st.session_state.trend_analysis = analyze_trend_data(data)
-        
-        # Update UI with success message
-        st.sidebar.success(f"Data loaded successfully at {st.session_state.last_update}")
-        
-        # Force a rerun to ensure UI reflects the latest data
+        if st.button("Create Account", key="register_button"):
+            if new_password != confirm_password:
+                st.sidebar.error("Passwords don't match!")
+            elif not new_email or not new_name or not new_password:
+                st.sidebar.error("Please fill all fields!")
+            else:
+                # In a real app, you would save the user to a database
+                st.session_state.user_name = new_name
+                st.session_state.email = new_email
+                st.session_state.is_logged_in = True
+                st.session_state.last_login = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.sidebar.success("Account created successfully!")
+                st.rerun()
+else:
+    # Show user info and logout button if logged in
+    st.sidebar.write(f"Welcome, **{st.session_state.user_name}**!")
+    st.sidebar.write(f"Email: {st.session_state.email}")
+    
+    if st.sidebar.button("Sign Out"):
+        st.session_state.is_logged_in = False
         st.rerun()
 
-# Date range selector (only if data is loaded)
-if st.session_state.current_data is not None:
-    st.sidebar.header("Date Range")
-    
-    # Get min and max dates from data
-    min_date = st.session_state.current_data['date'].min()
-    max_date = st.session_state.current_data['date'].max()
-    
-    date_range = st.sidebar.date_input(
-        "Select date range",
-        value=[
-            min_date,
-            max_date
-        ],
-        min_value=min_date,
-        max_value=max_date
-    )
-    
-    if len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered_data = filter_data(st.session_state.current_data, start_date, end_date)
-        st.session_state.filtered_data = filtered_data
-        
-        # Update trend analysis with filtered data
-        st.session_state.trend_analysis = analyze_trend_data(filtered_data)
+# Content Idea Generator
+st.sidebar.header("Content Idea Generator")
 
-# Forecast settings
-st.sidebar.header("Forecast Settings")
-forecast_enabled = st.sidebar.checkbox("Enable Forecasting", value=False)
+# Platform selection
+available_platforms = ["Instagram", "TikTok", "YouTube", "LinkedIn", "Twitter", "Facebook"]
+selected_platform = st.sidebar.selectbox(
+    "Select Platform",
+    options=available_platforms,
+    index=available_platforms.index(st.session_state.selected_platform) if st.session_state.selected_platform in available_platforms else 0
+)
 
-if forecast_enabled:
-    forecast_days = st.sidebar.slider("Forecast Period (Days)", 7, 90, 30)
-    forecast_method = st.sidebar.selectbox(
-        "Forecast Method",
-        options=["Prophet", "ARIMA", "Exponential Smoothing", "Linear Regression"],
-        index=0
-    )
-    
-    if st.sidebar.button("Generate Forecast"):
-        if st.session_state.current_data is not None:
-            with st.spinner("Generating forecast..."):
-                forecast_data = forecast_trend(
-                    st.session_state.filtered_data if 'filtered_data' in st.session_state else st.session_state.current_data,
-                    method=forecast_method.lower().replace(" ", "_"),
-                    periods=forecast_days
-                )
-                st.session_state.forecast_data = forecast_data
-                st.sidebar.success(f"Forecast generated for {forecast_days} days")
+# Store selection in session state
+st.session_state.selected_platform = selected_platform
 
-# AI content suggestions
-st.sidebar.header("AI Content Suggestions")
+# Content type/metric selection
+available_metrics = ["Engagement", "Growth", "Reach", "Viral Potential"]
+selected_metric = st.sidebar.selectbox(
+    "Content Goal",
+    options=available_metrics,
+    index=available_metrics.index(st.session_state.selected_metric) if st.session_state.selected_metric in available_metrics else 0
+)
+
+# Store selection in session state
+st.session_state.selected_metric = selected_metric
+
+# Optional industry selection for more specific ideas
+industries = ["Technology", "Fashion", "Food & Beverage", "Health & Wellness", "Travel", "Entertainment", "Education", "Finance", "Sports", "Beauty"]
+selected_industry = st.sidebar.selectbox("Industry (Optional)", ["Any"] + industries)
 
 # Check if AI is available (Anthropic API key is set up)
 ai_available = check_ai_availability()
 st.session_state.api_available = ai_available
 
-if ai_available["anthropic"]:
-    if st.sidebar.button("Generate Content Ideas"):
-        if st.session_state.trend_analysis:
-            with st.spinner("Generating AI content ideas..."):
-                content_ideas = generate_content_ideas_with_ai(
-                    st.session_state.trend_analysis.get("platform", "Unknown"),
-                    st.session_state.trend_analysis.get("metric", "Unknown"),
-                    st.session_state.trend_analysis,
-                    api_provider="anthropic"
-                )
-                st.session_state.content_ideas = content_ideas
-                if content_ideas.get("status") == "success":
-                    st.sidebar.success("Content ideas generated successfully!")
-                else:
-                    st.sidebar.error(content_ideas.get("message", "Error generating content ideas"))
-else:
-    st.sidebar.info("AI-powered content suggestions are not available right now.")
+# Generate Button
+if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
+    # Simulate loading data from backend - this would normally be handled invisibly
+    with st.spinner("Analyzing trends and generating content ideas..."):
+        # Get data using a simulation
+        data_source = "Social Media Trends"
+        data = get_data_from_source(st.session_state.data_sources[data_source])
+        
+        # Save data and generate analysis in the background
+        st.session_state.current_data = data
+        st.session_state.trend_analysis = analyze_trend_data(data)
+        
+        # Generate content ideas
+        if ai_available["anthropic"]:
+            content_ideas = generate_content_ideas_with_ai(
+                st.session_state.selected_platform, 
+                st.session_state.selected_metric,
+                st.session_state.trend_analysis,
+                api_provider="anthropic"
+            )
+            st.session_state.content_ideas = content_ideas
+            
+            if content_ideas.get("status") != "success":
+                st.sidebar.error("Error generating content ideas. Please try again.")
+        else:
+            st.sidebar.error("AI service is not available. Please check your settings.")
 
 # Settings section
 st.sidebar.header("Settings")
-
-# User profile section
-user_name = st.sidebar.text_input("Your Name", value=st.session_state.user_name, 
-                                 placeholder="Enter your name",
-                                 help="Personalize your dashboard")
-if user_name != st.session_state.user_name:
-    st.session_state.user_name = user_name
-    st.rerun()
 
 # Dark mode toggle
 dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
@@ -222,274 +182,258 @@ if dark_mode != st.session_state.dark_mode:
 # About section with app info
 with st.sidebar.expander("About"):
     st.markdown("""
-    **TrendVision AI** helps social media creators and marketers identify trends,
-    analyze performance data, and generate content ideas tailored to
-    specific platforms and objectives.
+    **TrendVision AI** helps content creators generate trending content ideas 
+    tailored to specific platforms. Our AI analyzes thousands of trending posts
+    to suggest content that will resonate with your audience.
     
     Built with Streamlit and powered by Anthropic Claude AI.
     
-    Version: 1.0.0
+    Version: 2.0.0
     """)
 
 # Main content area
-if st.session_state.current_data is None:
-    # Welcome screen with introduction and personalized greeting
-    if st.session_state.user_name:
-        st.title(f"Welcome back, {st.session_state.user_name}! 👋")
-        
-        # Show last login info
-        last_login_date = datetime.strptime(st.session_state.last_login, "%Y-%m-%d %H:%M:%S")
-        current_time = datetime.now()
-        time_diff = current_time - last_login_date
-        
-        if time_diff.days > 0:
-            time_msg = f"{time_diff.days} days ago"
-        elif time_diff.seconds // 3600 > 0:
-            time_msg = f"{time_diff.seconds // 3600} hours ago"
-        elif time_diff.seconds // 60 > 0:
-            time_msg = f"{time_diff.seconds // 60} minutes ago"
-        else:
-            time_msg = "just now"
-            
-        st.caption(f"Last login: {time_msg}")
-    else:
-        st.title("Welcome to TrendVision AI")
+if not st.session_state.is_logged_in:
+    # Welcome screen for visitors
+    st.title("TrendVision AI")
+    st.subheader("AI-Powered Content Ideas for Social Media Success")
     
-    st.subheader("Social Media Trend Analysis & Content Idea Generator")
+    # Hero section
+    hero_col1, hero_col2 = st.columns([3, 2])
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.image("https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7", caption="Social Media Strategy")
-        
+    with hero_col1:
         st.markdown("""
-        ### How TrendVision AI Helps You:
+        ### Never Run Out of Content Ideas Again
         
-        - **Identify Emerging Trends**: Discover what's gaining traction across platforms
-        - **Analyze Performance**: Understand what's working and why
-        - **Generate Content Ideas**: Get AI-powered content suggestions tailored to your platform
-        - **Forecast Future Performance**: Predict engagement trends for better planning
-        - **Optimize Your Strategy**: Make data-driven decisions to improve results
+        TrendVision AI analyzes thousands of trending posts across social platforms to generate
+        personalized content ideas tailored to your specific goals and audience.
+        
+        **Get started by creating an account or signing in →**
+        """)
+        
+        st.info("📱 Supporting all major platforms: Instagram, TikTok, YouTube, LinkedIn, Twitter, and Facebook")
+    
+    with hero_col2:
+        st.image("https://images.unsplash.com/photo-1611162616475-46b635cb6868", 
+                 caption="AI-powered content suggestions")
+    
+    # Benefit section
+    st.header("Why Choose TrendVision AI?")
+    
+    benefit_col1, benefit_col2, benefit_col3 = st.columns(3)
+    
+    with benefit_col1:
+        st.markdown("### 🚀 Stay Ahead of Trends")
+        st.markdown("Our AI constantly monitors what's trending across platforms so you're always ahead of the curve.")
+    
+    with benefit_col2:
+        st.markdown("### 💡 Platform-Optimized Ideas")
+        st.markdown("Get ideas specifically tailored to perform well on your chosen platform with format-specific suggestions.")
+    
+    with benefit_col3:
+        st.markdown("### 📈 Grow Your Audience")
+        st.markdown("Focus your content strategy on specific goals like engagement, growth, or viral potential.")
+    
+    # Testimonials
+    st.header("Trusted by Content Creators Worldwide")
+    
+    testimonial_col1, testimonial_col2 = st.columns(2)
+    
+    with testimonial_col1:
+        st.markdown("""
+        > "TrendVision AI transformed my content strategy. I went from posting whatever came to mind to having a strategic approach backed by data. My engagement is up 327% since I started using it!"
+        
+        **Sarah J., Instagram Influencer (142K followers)**
         """)
     
-    with col2:
-        st.image("https://images.unsplash.com/photo-1533750349088-cd871a92f312", caption="Content Creation Strategy")
-        
+    with testimonial_col2:
         st.markdown("""
-        ### Get Started in 3 Steps:
+        > "As a social media manager handling 5 different brand accounts, TrendVision AI has been a game-changer. It's like having a research team working for you 24/7."
         
-        1. **Select a Data Source** from the sidebar
-        2. **Load Data** to analyze trends and patterns
-        3. **Generate Content Ideas** tailored to your platform and goals
-        
-        For the best experience, connect your own data sources or use our simulations to explore different platforms.
-        
-        AI-powered content suggestions are available to help you create engaging content for your chosen platform.
+        **Mark T., Social Media Agency Director**
         """)
     
-    # Features showcase
+    # Brands section
+    st.markdown("### Powering Content Strategies For")
+    brand_col1, brand_col2, brand_col3, brand_col4 = st.columns(4)
+    with brand_col1:
+        st.markdown("**SocialBoost Agency**")
+    with brand_col2:
+        st.markdown("**ContentPro Studios**")
+    with brand_col3:
+        st.markdown("**ViralNation**")
+    with brand_col4:
+        st.markdown("**TrendSetters Media**")
+
+    # Features section
     st.header("Key Features")
-    feature_col1, feature_col2, feature_col3 = st.columns(3)
+    
+    feature_col1, feature_col2 = st.columns(2)
     
     with feature_col1:
-        st.subheader("📊 Trend Analysis")
-        st.write("Identify emerging patterns and insights across platforms")
+        st.image("https://images.unsplash.com/photo-1611162618071-b39a2ec055fb", caption="Platform-specific content ideas")
         
-        st.subheader("🚀 Performance Forecasting")
-        st.write("Predict future trends with advanced algorithms")
+        st.markdown("""
+        ### Platform-Optimized Content Ideas
+        
+        * Format-specific suggestions tailored to each platform
+        * Hashtag recommendations to maximize reach
+        * Caption templates and hooks that drive engagement
+        * Content series ideas for consistent posting
+        """)
     
     with feature_col2:
-        st.subheader("💡 Content Ideas")
-        st.write("Get platform-specific content suggestions that resonate")
+        st.image("https://images.unsplash.com/photo-1560472355-536de3962603", caption="Data-driven content strategy")
         
-        st.subheader("📈 Engagement Optimization")
-        st.write("Learn what drives engagement for your specific audience")
+        st.markdown("""
+        ### AI-Powered Trend Analysis
+        
+        * Identify emerging topics before they peak
+        * Understand what's resonating with audiences now
+        * Get seasonal content recommendations
+        * Optimize posting time and frequency
+        """)
     
-    with feature_col3:
-        st.subheader("🗓️ Posting Strategy")
-        st.write("Discover optimal posting times and content mix")
+    # CTA
+    st.markdown("---")
+    st.markdown("### Ready to transform your content strategy?")
+    
+    cta_col1, cta_col2, cta_col3 = st.columns([2, 2, 1])
+    with cta_col1:
+        st.info("Create an account to start generating ideas")
+    with cta_col2:
+        st.success("Already have an account? Sign in")
+
+elif 'content_ideas' in st.session_state and st.session_state.content_ideas and st.session_state.content_ideas.get("status") == "success":
+    # Show generated content ideas
+    st.title(f"Content Ideas for {st.session_state.selected_platform}")
+    
+    # Header with info about the generated ideas
+    st.markdown(f"### Optimized for: **{st.session_state.selected_metric}**")
+    if selected_industry != "Any":
+        st.markdown(f"Industry: **{selected_industry}**")
+    
+    st.markdown("---")
+    
+    # Display the content ideas
+    content_ideas = st.session_state.content_ideas.get("content_ideas", [])
+    
+    if content_ideas:
+        idea_cols = st.columns(2)
         
-        st.subheader("🔍 Competitor Insights")
-        st.write("Benchmark your performance against industry trends")
+        for i, idea in enumerate(content_ideas):
+            col_idx = i % 2
+            
+            with idea_cols[col_idx]:
+                with st.container(border=True):
+                    st.subheader(f"{i+1}. {idea.get('title', f'Idea {i+1}')}")
+                    st.markdown(idea.get("description", ""))
+                    
+                    if "best_formats" in idea:
+                        st.markdown("**Best Formats:**")
+                        formats = idea.get("best_formats", [])
+                        for fmt in formats:
+                            st.markdown(f"✓ {fmt}")
+                    
+                    if "hashtags" in idea:
+                        st.markdown("**Suggested Hashtags:**")
+                        hashtags = idea.get("hashtags", [])
+                        hashtag_text = " ".join([f"#{tag}" for tag in hashtags])
+                        st.code(hashtag_text)
+                    
+                    st.markdown("---")
+    else:
+        st.info("No content ideas were generated. Try adjusting your platform or goal selection.")
+    
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔄 Generate New Ideas", use_container_width=True):
+            # This would trigger the generation process again
+            st.rerun()
+    
+    with col2:
+        if st.button("💾 Save Ideas", use_container_width=True):
+            st.success("Ideas saved to your account!")
+    
+    with col3:
+        if st.button("📤 Export Ideas", use_container_width=True):
+            st.download_button(
+                label="Download as Text",
+                data="\n\n".join([f"{i+1}. {idea.get('title', '')}\n{idea.get('description', '')}" for i, idea in enumerate(content_ideas)]),
+                file_name="content_ideas.txt",
+                mime="text/plain"
+            )
 
 else:
-    # Display data analysis and trend insights
-    if st.session_state.user_name:
-        # Personalized header for returning users with data loaded
-        st.title(f"{st.session_state.user_name}'s Social Media Trend Analysis")
+    # Show dashboard for logged-in users without generated content
+    st.title(f"Welcome back, {st.session_state.user_name}! 👋")
+    st.caption(f"Last login: {st.session_state.last_login}")
+    
+    st.markdown("## Your AI Content Assistant")
+    
+    # Instructions
+    st.info("**To generate content ideas:**\n1. Select your platform in the sidebar\n2. Choose your content goal\n3. Click 'Generate Ideas'")
+    
+    # Featured platforms
+    st.markdown("### Featured Platforms")
+    platform_col1, platform_col2, platform_col3 = st.columns(3)
+    
+    platform_images = {
+        "Instagram": "https://images.unsplash.com/photo-1611262588024-d12430b98920",
+        "TikTok": "https://images.unsplash.com/photo-1633675254053-d96c7668c3b8",
+        "YouTube": "https://images.unsplash.com/photo-1611162616475-46b635cb6868",
+    }
+    
+    with platform_col1:
+        st.image(platform_images["Instagram"], caption="Instagram")
+        if st.button("Generate for Instagram", key="insta_button"):
+            st.session_state.selected_platform = "Instagram"
+            st.rerun()
+    
+    with platform_col2:
+        st.image(platform_images["TikTok"], caption="TikTok")
+        if st.button("Generate for TikTok", key="tiktok_button"):
+            st.session_state.selected_platform = "TikTok"
+            st.rerun()
+    
+    with platform_col3:
+        st.image(platform_images["YouTube"], caption="YouTube")
+        if st.button("Generate for YouTube", key="youtube_button"):
+            st.session_state.selected_platform = "YouTube"
+            st.rerun()
+    
+    # Trending Topics Preview
+    st.markdown("### Current Trending Topics")
+    st.caption("Based on our AI analysis across all platforms")
+    
+    # Simulated trending topics
+    trending_topics = [
+        "Sustainable living hacks", 
+        "Day-in-the-life content", 
+        "Creator economy insights",
+        "AI tools for productivity", 
+        "Mindfulness practices", 
+        "Behind-the-scenes content",
+        "Personal finance tips", 
+        "Skill-sharing tutorials", 
+        "Authentic storytelling"
+    ]
+    
+    trend_cols = st.columns(3)
+    for i, topic in enumerate(trending_topics):
+        with trend_cols[i % 3]:
+            st.markdown(f"• {topic}")
+    
+    # Recent Activity
+    st.markdown("### Your Recent Activity")
+    
+    # Simulated recent activity
+    if random.random() > 0.5:
+        st.info("Generate your first content ideas to see your activity here!")
     else:
-        st.title("Social Media Trend Analysis")
-    
-    # Get the data to display
-    data_to_display = st.session_state.filtered_data if 'filtered_data' in st.session_state else st.session_state.current_data
-    
-    # Display basic info about the analysis
-    trend_analysis = st.session_state.trend_analysis
-    
-    if trend_analysis and trend_analysis["status"] == "success":
-        col1, col2, col3 = st.columns(3)
+        st.markdown("**Last Generated:**")
+        st.markdown("Instagram content ideas focused on Engagement (4 days ago)")
         
-        with col1:
-            st.metric("Platform", trend_analysis["platform"])
-        
-        with col2:
-            st.metric("Metric", trend_analysis["metric"])
-        
-        with col3:
-            if "insights" in trend_analysis and "overall_trend" in trend_analysis["insights"]:
-                overall_trend = trend_analysis["insights"]["overall_trend"]
-                direction = overall_trend["direction"].upper()
-                change = f"{overall_trend['percent_change']}%"
-                st.metric("Trend Direction", direction, change)
-            else:
-                st.metric("Trend Direction", "N/A")
-    
-    # Visualizations row
-    st.header("Performance Visualization")
-    
-    # Trend visualization
-    fig = create_visualization(
-        data_to_display,
-        visualization_type='trend',
-        chart_type='line',
-        forecast_data=st.session_state.forecast_data
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Insights section
-    st.header("Trend Insights")
-    
-    if trend_analysis and trend_analysis["status"] == "success":
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Performance Analysis")
-            
-            if "insights" in trend_analysis:
-                insights = trend_analysis["insights"]
-                
-                if "overall_trend" in insights:
-                    st.markdown(f"**Overall Trend:** {insights['overall_trend']['interpretation']}")
-                
-                if "volatility" in insights:
-                    st.markdown(f"**Volatility Analysis:** {insights['volatility']['interpretation']}")
-                
-                if "seasonality" in insights:
-                    seasonality = insights["seasonality"]
-                    st.markdown(f"**Best Day for Content:** {seasonality['best_day']}")
-                    st.markdown(f"**Worst Day for Content:** {seasonality['worst_day']}")
-                    st.markdown(f"**Day Variance:** {seasonality['day_variance']}% difference between best and worst day")
-        
-        with col2:
-            st.subheader("Platform Trends")
-            
-            if "trend_patterns" in trend_analysis:
-                patterns = trend_analysis["trend_patterns"]
-                
-                st.markdown("**Current Trends:**")
-                for trend in patterns.get("current_trends", []):
-                    st.markdown(f"• {trend}")
-                
-                st.markdown("**Emerging Trends:**")
-                for trend in patterns.get("emerging_trends", []):
-                    st.markdown(f"• {trend}")
-    
-    # Content recommendations section
-    st.header("Content Recommendations")
-    
-    if trend_analysis and "recommendations" in trend_analysis:
-        recommendations = trend_analysis["recommendations"]
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Content Strategies")
-            
-            if "content_strategies" in recommendations:
-                strategies = recommendations["content_strategies"]
-                for strategy in strategies:
-                    st.markdown(f"• {strategy}")
-            
-            st.subheader("Posting Tips")
-            
-            if "posting_tips" in recommendations:
-                tips = recommendations["posting_tips"]
-                for tip in tips:
-                    st.markdown(f"• {tip}")
-        
-        with col2:
-            st.subheader("Content Ideas")
-            
-            if "content_ideas" in recommendations:
-                ideas = recommendations["content_ideas"]
-                for idea in ideas:
-                    st.markdown(f"• {idea}")
-    
-    # AI-generated content ideas section
-    if st.session_state.content_ideas and st.session_state.content_ideas.get("status") == "success":
-        st.header("AI-Generated Content Suggestions")
-        
-        ideas = st.session_state.content_ideas.get("ideas", {})
-        
-        ai_col1, ai_col2 = st.columns(2)
-        
-        with ai_col1:
-            st.subheader("Content Ideas")
-            
-            if "content_ideas" in ideas:
-                for i, idea in enumerate(ideas["content_ideas"][:5], 1):
-                    with st.expander(f"{i}. {idea.get('title', f'Idea {i}')}"):
-                        st.markdown(idea.get("description", ""))
-                        if "best_formats" in idea:
-                            st.markdown(f"**Best formats:** {', '.join(idea['best_formats'])}")
-            
-            st.subheader("Content Series Ideas")
-            
-            if "content_series_ideas" in ideas:
-                for idea in ideas["content_series_ideas"]:
-                    st.markdown(f"• {idea}")
-        
-        with ai_col2:
-            st.subheader("Hashtag Suggestions")
-            
-            if "hashtag_suggestions" in ideas:
-                hashtags = ideas["hashtag_suggestions"]
-                hashtag_html = " ".join([f"<span style='background-color:#e6f3ff; padding:5px; margin:5px; border-radius:3px;'>{tag}</span>" for tag in hashtags])
-                st.markdown(hashtag_html, unsafe_allow_html=True)
-            
-            st.subheader("Posting Schedule")
-            
-            if "posting_schedule" in ideas:
-                schedule = ideas["posting_schedule"]
-                if "best_days" in schedule:
-                    st.markdown(f"**Best days:** {', '.join(schedule['best_days'])}")
-                if "best_times" in schedule:
-                    st.markdown(f"**Best times:** {', '.join(schedule['best_times'])}")
-                if "frequency" in schedule:
-                    st.markdown(f"**Recommended frequency:** {schedule['frequency']}")
-            
-            st.subheader("Trend Insights")
-            
-            if "trend_insights" in ideas:
-                for insight in ideas["trend_insights"]:
-                    st.markdown(f"• {insight}")
-    
-    # Data table section
-    with st.expander("View Data"):
-        st.dataframe(data_to_display, use_container_width=True)
-        
-        # Export options
-        st.subheader("Export Data")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            export_format = st.selectbox(
-                "Export Format",
-                options=["CSV", "Excel", "JSON"],
-                index=0
-            )
-        
-        with col2:
-            if st.button("Export Data"):
-                export_data(data_to_display, format=export_format.lower())
+        st.markdown("**Popular Topic:**")
+        st.markdown("Your most-used topic: Behind-the-scenes content")
