@@ -13,7 +13,7 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provider="gemini"):
+def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provider="huggingface"):
     """
     Generate content ideas using AI services. Uses the application's API key.
     
@@ -21,19 +21,33 @@ def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provid
         platform (str): Social media platform
         metric (str): Performance metric
         trend_data (dict, optional): Trend data for context
-        api_provider (str): AI provider to use (openai, anthropic, or gemini)
+        api_provider (str): AI provider to use (huggingface, openai, anthropic, or gemini)
         
     Returns:
         dict: Content ideas and suggestions
     """
-    # Check if we have the necessary API key for the selected provider
+    # Use HuggingFace as our default free AI API option
+    if api_provider.lower() == "huggingface":
+        try:
+            # Import the function from our huggingface_integration module
+            from huggingface_integration import generate_content_ideas_with_huggingface
+            return generate_content_ideas_with_huggingface(platform, metric, trend_data)
+        except Exception as e:
+            logger.error(f"Error generating content with HuggingFace: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Error with HuggingFace: {str(e)}",
+                "content_ideas": get_fallback_ideas(platform, metric)
+            }
+    
+    # For other API providers, check if we have the necessary API key
     api_key = get_api_key(api_provider)
     
     if not api_key:
         return {
             "status": "error",
             "message": f"No API key found for {api_provider}. Please contact support.",
-            "ideas": get_fallback_ideas(platform, metric)
+            "content_ideas": get_fallback_ideas(platform, metric)
         }
     
     try:
@@ -44,13 +58,16 @@ def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provid
         elif api_provider == "gemini":
             return generate_with_gemini(platform, metric, trend_data, api_key)
         else:
-            raise ValueError(f"Unsupported AI provider: {api_provider}")
+            # If provider is not supported, use HuggingFace
+            logger.warning(f"Unsupported AI provider: {api_provider}, falling back to HuggingFace")
+            from huggingface_integration import generate_content_ideas_with_huggingface
+            return generate_content_ideas_with_huggingface(platform, metric, trend_data)
     except Exception as e:
         logger.error(f"Error generating content with {api_provider}: {str(e)}")
         return {
             "status": "error",
             "message": f"Error generating content: {str(e)}",
-            "ideas": get_fallback_ideas(platform, metric)
+            "content_ideas": get_fallback_ideas(platform, metric)
         }
 
 def get_api_key(provider):

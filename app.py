@@ -142,11 +142,12 @@ selected_industry = st.sidebar.selectbox("Industry (Optional)", ["Any"] + indust
 ai_available = check_ai_availability()
 st.session_state.api_available = ai_available
 
-# We'll use built-in templates by default since APIs are having issues
-if 'use_ai_api' not in st.session_state:
-    st.session_state.use_ai_api = False
+# Set HuggingFace as our default free AI provider
+if 'selected_provider' not in st.session_state:
+    st.session_state.selected_provider = "huggingface"  # Default to HuggingFace
 
-st.sidebar.info("📚 Using built-in content idea templates developed by expert social media strategists.")
+st.sidebar.success("✅ Using HuggingFace's free AI model for content generation")
+st.sidebar.info("HuggingFace provides free AI capabilities with no API key required")
 
 # Generate Button
 if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
@@ -160,21 +161,21 @@ if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
         st.session_state.current_data = data
         st.session_state.trend_analysis = analyze_trend_data(data)
         
-        # Generate content ideas using our enhanced fallback system
-        # This is robust and works even when APIs are unavailable
-        fallback_ideas = get_fallback_ideas(
+        # Generate content ideas using HuggingFace (free API)
+        content_ideas = generate_content_ideas_with_ai(
             st.session_state.selected_platform, 
-            st.session_state.selected_metric
+            st.session_state.selected_metric,
+            st.session_state.trend_analysis,
+            api_provider="huggingface"
         )
         
-        # Create a nicely formatted response
-        content_ideas = {
-            "status": "success",
-            "message": "Generated using expert-crafted templates",
-            "content_ideas": fallback_ideas
-        }
-        
         st.session_state.content_ideas = content_ideas
+        
+        # Display a message about the generation source
+        if content_ideas.get("status") == "success":
+            st.sidebar.success(f"✅ Ideas generated with {content_ideas.get('provider', 'AI')}")
+        else:
+            st.sidebar.warning(content_ideas.get("message", "Error generating content ideas. Using fallback templates."))
 
 # Settings section
 st.sidebar.header("Settings")
