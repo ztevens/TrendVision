@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 # Constants
 HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/"
 # Use smaller models that fit within free API limits (less than 10GB)
-DEFAULT_MODEL = "gpt2"  # Small but powerful text generation model (~500MB)
-BACKUP_MODEL = "facebook/bart-large-cnn"  # Backup model for summarization (~1.6GB)
+DEFAULT_MODEL = "distilroberta-base"  # Even smaller text model with good results
+BACKUP_MODEL = "distilgpt2"  # Tiny backup model
 
 def generate_with_huggingface(prompt, model_name=DEFAULT_MODEL, api_key=None):
     """
@@ -41,29 +41,11 @@ def generate_with_huggingface(prompt, model_name=DEFAULT_MODEL, api_key=None):
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         
-        # Prepare payload based on model type
-        if "mistral" in model_name.lower() or "llama" in model_name.lower():
-            # Format for chat models
-            payload = {
-                "inputs": f"<s>[INST] {prompt} [/INST]",
-                "parameters": {
-                    "max_new_tokens": 1024,
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                    "return_full_text": False
-                }
-            }
-        else:
-            # Format for completion models
-            payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 1024,
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                    "return_full_text": False
-                }
-            }
+        # Super simplified payload to avoid compatibility issues - minimal parameters
+        payload = {"inputs": prompt}
+        
+        # Just for logging
+        logger.info(f"Using simple payload for model: {model_name}")
         
         # Make API request
         logger.info(f"Sending request to HuggingFace model: {model_name}")
