@@ -307,8 +307,8 @@ def analyze_trend_data(data):
     # Initialize results
     results = {
         "status": "success",
-        "platform": data.get("platform", ["Unknown"])[0] if "platform" in data else "Unknown",
-        "metric": data.get("metric", ["Unknown"])[0] if "metric" in data else "Unknown",
+        "platform": data["platform"].iloc[0] if "platform" in data.columns else "Unknown",
+        "metric": data["metric"].iloc[0] if "metric" in data.columns else "Unknown",
         "period_analyzed": f"{data['date'].min().strftime('%Y-%m-%d')} to {data['date'].max().strftime('%Y-%m-%d')}",
         "data_points": len(data),
         "insights": {},
@@ -344,7 +344,12 @@ def analyze_trend_data(data):
         
         # Identify seasonality if enough data
         if len(data) >= 14:  # At least two weeks of data
-            data['day_of_week'] = pd.to_datetime(data['date']).dt.dayofweek
+            # Check if date is already datetime type, convert if needed
+            if not pd.api.types.is_datetime64_any_dtype(data['date']):
+                data['day_of_week'] = pd.to_datetime(data['date']).dt.dayofweek
+            else:
+                data['day_of_week'] = data['date'].dt.dayofweek
+                
             day_avg = data.groupby('day_of_week')['value'].mean()
             max_day = day_avg.idxmax()
             min_day = day_avg.idxmin()
