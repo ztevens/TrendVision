@@ -91,17 +91,17 @@ class DataHistory(Base):
     id = Column(Integer, primary_key=True)
     source_type = Column(String(50), nullable=False)
     date = Column(DateTime, nullable=False)
-    metadata = Column(Text, nullable=False)  # JSON string with data metadata
+    meta_data = Column(Text, nullable=False)  # JSON string with data metadata, renamed from metadata to avoid SQLAlchemy conflict
     value = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.now)
     
     def get_metadata(self):
         """Return metadata as a dictionary."""
-        return json.loads(self.metadata)
+        return json.loads(self.meta_data)
     
     def set_metadata(self, metadata_dict):
         """Set metadata from a dictionary."""
-        self.metadata = json.dumps(metadata_dict)
+        self.meta_data = json.dumps(metadata_dict)
 
 # Initialize database tables
 def init_db():
