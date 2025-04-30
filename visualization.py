@@ -94,6 +94,15 @@ def create_trend_visualization(data, chart_type='line', forecast_data=None):
     
     # Create figure based on chart type
     if chart_type == 'line':
+        # Make sure the x-column is actually in the dataframe
+        if x_col not in data.columns:
+            # Try lowercase 'date' if capitalized 'Date' doesn't exist
+            if x_col == 'Date' and 'date' in data.columns:
+                x_col = 'date'
+            else:
+                # Use the first column as fallback
+                x_col = data.columns[0]
+                
         fig = px.line(
             data, 
             x=x_col, 
