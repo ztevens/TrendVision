@@ -31,7 +31,7 @@ def load_data_sources():
         },
         "Social Media Trends": {
             "type": "simulated",
-            "platforms": ["Twitter", "Facebook", "Instagram", "LinkedIn", "TikTok"],
+            "platforms": ["Twitter", "Facebook", "Instagram", "LinkedIn", "TikTok", "YouTube"],
             "metrics": ["Engagement", "Followers", "Reach", "Impressions"],
             "start_date": "2022-01-01",
             "end_date": datetime.now().strftime("%Y-%m-%d")
@@ -236,6 +236,12 @@ def generate_simulated_data(config):
             seasonality = 2000
             spike_prob = 0.04
             spike_factor = 5
+        elif platform == "YouTube":
+            base = 100000
+            trend = 300
+            seasonality = 5000
+            spike_prob = 0.03
+            spike_factor = 6
         
         # Adjust based on metric
         if metric == "Engagement":

@@ -60,6 +60,10 @@ def filter_data(data, start_date, end_date):
     if isinstance(end_date, str):
         end_date = pd.to_datetime(end_date)
     
+    # Ensure start_date and end_date are pandas Timestamp objects
+    start_date = pd.Timestamp(start_date)
+    end_date = pd.Timestamp(end_date)
+    
     # Filter data
     filtered_data = data[(data['date'] >= start_date) & (data['date'] <= end_date)]
     
