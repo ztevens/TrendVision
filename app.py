@@ -87,6 +87,26 @@ data_source = st.sidebar.selectbox(
     index=0
 )
 
+# Show additional selectors based on data source
+current_config = st.session_state.data_sources[data_source]
+
+# If Social Media Trends data source is selected, show platform and metric selectors
+if data_source == "Social Media Trends" and "platforms" in current_config and "metrics" in current_config:
+    selected_platform = st.sidebar.selectbox(
+        "Select Platform",
+        options=current_config["platforms"],
+        key="platform_selector"
+    )
+    selected_metric = st.sidebar.selectbox(
+        "Select Metric",
+        options=current_config["metrics"],
+        key="metric_selector"
+    )
+    
+    # Store selections in session state
+    st.session_state.selected_platform = selected_platform
+    st.session_state.selected_metric = selected_metric
+
 # Load data button
 if st.sidebar.button("Load Data"):
     with st.spinner("Loading data..."):

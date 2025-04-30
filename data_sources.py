@@ -205,15 +205,9 @@ def generate_simulated_data(config):
         
     elif "platforms" in config:
         # Social media trends
-        platform = st.sidebar.selectbox("Select Platform", config["platforms"], key="platform_selector")
-        metric = st.sidebar.selectbox("Select Metric", config["metrics"], key="metric_selector")
-        
-        # Store the selected platform and metric directly in session state
-        st.session_state.selected_platform = platform
-        st.session_state.selected_metric = metric
-        
-        # We're now using the directly selected platform and metric
-        # This ensures we always have the latest selection
+        # Get platform and metric from session state (already set in app.py)
+        platform = st.session_state.selected_platform if 'selected_platform' in st.session_state else config["platforms"][0]
+        metric = st.session_state.selected_metric if 'selected_metric' in st.session_state else config["metrics"][0]
             
         # Reset random seed to ensure different platforms generate different data
         # while keeping them consistent between runs
