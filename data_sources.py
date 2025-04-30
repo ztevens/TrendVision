@@ -202,8 +202,18 @@ def generate_simulated_data(config):
         platform = st.sidebar.selectbox("Select Platform", config["platforms"])
         metric = st.sidebar.selectbox("Select Metric", config["metrics"])
         
-        # Generate time series with trend, seasonality, and occasional spikes
-        np.random.seed(42)  # For reproducibility
+        # Reset random seed to ensure different platforms generate different data
+        # while keeping them consistent between runs
+        platform_seed_map = {
+            "Twitter": 42,
+            "Facebook": 43,
+            "Instagram": 44,
+            "LinkedIn": 45,
+            "TikTok": 46,
+            "YouTube": 47
+        }
+        seed = platform_seed_map.get(platform, 42)
+        np.random.seed(seed)
         
         # Base values vary by platform and metric
         if platform == "Twitter":
