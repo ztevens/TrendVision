@@ -55,6 +55,8 @@ with st.sidebar:
     if st.button("Load Data"):
         with st.spinner("Loading data..."):
             data = get_data_from_source(st.session_state.data_sources[data_source])
+            # Save the current data source configuration for later use
+            st.session_state.current_data_source = st.session_state.data_sources[data_source]
             st.session_state.current_data = data
             st.session_state.last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.success(f"Data loaded successfully at {st.session_state.last_update}")

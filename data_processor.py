@@ -82,6 +82,11 @@ def resample_data(data, rule):
     """
     # Set date as index
     df = data.copy()
+    
+    # Ensure datetime column
+    if df['date'].dtype != 'datetime64[ns]':
+        df['date'] = pd.to_datetime(df['date'])
+        
     df = df.set_index('date')
     
     # Resample numeric columns
