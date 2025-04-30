@@ -464,13 +464,24 @@ def create_distribution_visualization(data, chart_type='histogram'):
         # Add KDE (kernel density estimation) curve
         hist_data = [data[y_col].dropna()]
         
-        x_range = np.linspace(min(hist_data[0]), max(hist_data[0]), 100)
-        kde = get_kde(hist_data[0], x_range)
+        # Safety check to ensure we have data for KDE
+        if len(hist_data[0]) > 1:
+            x_range = np.linspace(min(hist_data[0]), max(hist_data[0]), 100)
+            kde = get_kde(hist_data[0], x_range)
+        else:
+            # Not enough data points for KDE
+            x_range = np.linspace(0, 1, 100)
+            kde = np.zeros(100)
         
         # Scale KDE to match histogram
-        hist_max = max(fig.data[0].y)
-        kde_max = max(kde)
-        scaled_kde = [k * (hist_max / kde_max) for k in kde]
+        # Check if figure data is available
+        if fig.data and hasattr(fig.data[0], 'y') and len(fig.data[0].y) > 0:
+            hist_max = max(fig.data[0].y)
+            kde_max = max(kde) if len(kde) > 0 else 1
+            scaled_kde = [k * (hist_max / kde_max) for k in kde] if kde_max > 0 else kde
+        else:
+            # If no histogram data, just use the raw kde values
+            scaled_kde = kde
         
         fig.add_trace(
             go.Scatter(
@@ -565,8 +576,13 @@ def create_distribution_visualization(data, chart_type='histogram'):
         values = data[y_col].dropna().values
         
         # Generate points for PDF
-        x_range = np.linspace(min(values), max(values), 100)
-        kde = get_kde(values, x_range)
+        if len(values) > 1:
+            x_range = np.linspace(min(values), max(values), 100)
+            kde = get_kde(values, x_range)
+        else:
+            # Not enough data points for KDE
+            x_range = np.linspace(0, 1, 100)
+            kde = np.zeros(100)
         
         fig = go.Figure(
             go.Scatter(
