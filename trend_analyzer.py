@@ -304,11 +304,18 @@ def analyze_trend_data(data):
             "message": "No data available for analysis"
         }
     
-    # Initialize results
+    # Detect platform and metric from session state first, then fallback to data
+    import streamlit as st
+    
+    # Initialize results - prioritize session state values for platform/metric
     results = {
         "status": "success",
-        "platform": data["platform"].iloc[0] if "platform" in data.columns else "Unknown",
-        "metric": data["metric"].iloc[0] if "metric" in data.columns else "Unknown",
+        "platform": (st.session_state.selected_platform 
+                    if 'selected_platform' in st.session_state 
+                    else (data["platform"].iloc[0] if "platform" in data.columns and len(data) > 0 else "Unknown")),
+        "metric": (st.session_state.selected_metric 
+                  if 'selected_metric' in st.session_state 
+                  else (data["metric"].iloc[0] if "metric" in data.columns and len(data) > 0 else "Unknown")),
         "period_analyzed": f"{data['date'].min().strftime('%Y-%m-%d')} to {data['date'].max().strftime('%Y-%m-%d')}",
         "data_points": len(data),
         "insights": {},
