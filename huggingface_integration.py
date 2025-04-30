@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 # Constants
 HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/"
 # Use smaller models that fit within free API limits (less than 10GB)
-DEFAULT_MODEL = "facebook/bart-large-cnn"  # Smaller model for summarization (~1.6GB)
-BACKUP_MODEL = "distilbert/distilbert-base-uncased-finetuned-sst-2-english"  # Tiny backup model
+DEFAULT_MODEL = "gpt2"  # Small but powerful text generation model (~500MB)
+BACKUP_MODEL = "facebook/bart-large-cnn"  # Backup model for summarization (~1.6GB)
 
 def generate_with_huggingface(prompt, model_name=DEFAULT_MODEL, api_key=None):
     """
