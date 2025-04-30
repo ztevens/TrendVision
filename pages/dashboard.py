@@ -86,14 +86,21 @@ else:
         st.subheader("Distribution")
         
         # Create distribution visualization
-        if 'value' in data.columns:
-            fig_dist = create_visualization(
-                data,
-                visualization_type='distribution',
-                chart_type='histogram'
-            )
-            
-            st.plotly_chart(fig_dist, use_container_width=True)
+        if 'value' in data.columns and len(data) > 0:
+            try:
+                fig_dist = create_visualization(
+                    data,
+                    visualization_type='distribution',
+                    chart_type='histogram'
+                )
+                
+                if fig_dist is not None:
+                    st.plotly_chart(fig_dist, use_container_width=True)
+                else:
+                    st.info("Unable to create distribution visualization for this dataset")
+            except Exception as e:
+                st.error(f"Error creating distribution visualization: {str(e)}")
+                st.info("Try loading different data or selecting a different visualization type")
     
     # Second row
     st.subheader("Detailed Analysis")
