@@ -13,7 +13,7 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provider="anthropic"):
+def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provider="gemini"):
     """
     Generate content ideas using AI services. Uses the application's API key.
     
@@ -21,7 +21,7 @@ def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provid
         platform (str): Social media platform
         metric (str): Performance metric
         trend_data (dict, optional): Trend data for context
-        api_provider (str): AI provider to use (openai or anthropic)
+        api_provider (str): AI provider to use (openai, anthropic, or gemini)
         
     Returns:
         dict: Content ideas and suggestions
@@ -41,6 +41,8 @@ def generate_content_ideas_with_ai(platform, metric, trend_data=None, api_provid
             return generate_with_openai(platform, metric, trend_data, api_key)
         elif api_provider == "anthropic":
             return generate_with_anthropic(platform, metric, trend_data, api_key)
+        elif api_provider == "gemini":
+            return generate_with_gemini(platform, metric, trend_data, api_key)
         else:
             raise ValueError(f"Unsupported AI provider: {api_provider}")
     except Exception as e:
@@ -315,13 +317,91 @@ def get_fallback_ideas(platform, metric):
     
     return fallback_ideas
 
+def generate_with_gemini(platform, metric, trend_data, api_key):
+    """Generate content ideas using Google's Gemini AI."""
+    try:
+        # Import here to avoid dependency if not used
+        import google.generativeai as genai
+        
+        # Configure the API key
+        genai.configure(api_key=api_key)
+        
+        # Create a structured prompt
+        prompt = create_prompt_for_content_ideas(platform, metric, trend_data)
+        
+        # Add formatting instructions for JSON
+        prompt += "\n\nPlease format your response as a valid JSON object with the following structure:\n"
+        prompt += """{
+  "content_ideas": [
+    {"title": "Idea 1 Title", "description": "Description of the idea", "best_formats": ["format1", "format2"]},
+    ...more ideas
+  ],
+  "hashtag_suggestions": ["hashtag1", "hashtag2", ...],
+  "posting_schedule": {
+    "best_days": ["day1", "day2"],
+    "best_times": ["time1", "time2"],
+    "frequency": "Recommended posting frequency"
+  },
+  "trend_insights": ["insight1", "insight2", ...],
+  "content_series_ideas": ["series idea 1", "series idea 2", ...]
+}"""
+        
+        # Set up the model
+        model = genai.GenerativeModel('gemini-pro')
+        
+        # Call Gemini API
+        response = model.generate_content(prompt)
+        
+        # Extract the text from the response
+        content = response.text
+        
+        # Try to find and parse JSON in the response
+        try:
+            # Extract JSON content
+            json_content = extract_json_from_text(content)
+            ideas = json.loads(json_content)
+        except:
+            # If JSON parsing fails, create a structured response from the text
+            ideas = {
+                "content_ideas": [{"title": "Generated Content", "description": content, "best_formats": ["text"]}],
+                "hashtag_suggestions": [],
+                "posting_schedule": {},
+                "trend_insights": [],
+                "content_series_ideas": []
+            }
+        
+        return {
+            "status": "success",
+            "provider": "gemini",
+            "ideas": ideas,
+            "message": "Content ideas generated successfully with Google Gemini."
+        }
+    except ImportError:
+        logger.error("Google Generative AI package not installed")
+        return {
+            "status": "error",
+            "message": "Google Generative AI package not installed. Please install it with: pip install google-generativeai",
+            "ideas": get_fallback_ideas(platform, metric)
+        }
+    except Exception as e:
+        error_message = str(e)
+        logger.error(f"Error with Gemini: {error_message}")
+        
+        return {
+            "status": "error",
+            "message": f"Error with Gemini API: {error_message}",
+            "ideas": get_fallback_ideas(platform, metric)
+        }
+
 def check_ai_availability():
     """Check if AI services are available based on API keys."""
     openai_available = get_api_key("openai") is not None
     anthropic_available = get_api_key("anthropic") is not None
+    gemini_available = get_api_key("gemini") is not None
     
     return {
         "openai": openai_available,
         "anthropic": anthropic_available,
-        "any_available": openai_available or anthropic_available
+        "gemini": gemini_available,
+        "any_available": openai_available or anthropic_available or gemini_available
     }

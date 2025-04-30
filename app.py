@@ -142,9 +142,54 @@ selected_industry = st.sidebar.selectbox("Industry (Optional)", ["Any"] + indust
 ai_available = check_ai_availability()
 st.session_state.api_available = ai_available
 
-# API Key Warning
-if not ai_available["anthropic"]:
-    st.sidebar.warning("⚠️ Anthropic API key is required for AI content generation. Please contact support.")
+# AI Provider selection
+ai_providers = ["Gemini", "Anthropic", "OpenAI"]
+available_providers = []
+
+if ai_available["gemini"]:
+    available_providers.append("Gemini")
+if ai_available["anthropic"]:
+    available_providers.append("Anthropic")
+if ai_available["openai"]:
+    available_providers.append("OpenAI")
+
+if 'selected_provider' not in st.session_state or st.session_state.selected_provider not in ai_providers:
+    st.session_state.selected_provider = "Gemini"  # Default to Gemini
+
+selected_provider = st.sidebar.selectbox(
+    "AI Provider",
+    options=ai_providers,
+    index=ai_providers.index(st.session_state.selected_provider)
+)
+st.session_state.selected_provider = selected_provider
+
+# API Key entry
+if selected_provider == "Gemini" and not ai_available["gemini"]:
+    gemini_key = st.sidebar.text_input("Google Gemini API Key", type="password", key="gemini_key_input")
+    if gemini_key:
+        st.session_state.GEMINI_API_KEY = gemini_key
+        st.sidebar.success("Gemini API key set!")
+        st.rerun()
+    else:
+        st.sidebar.warning("⚠️ Gemini API key is required. Please enter your API key above.")
+
+elif selected_provider == "Anthropic" and not ai_available["anthropic"]:
+    anthropic_key = st.sidebar.text_input("Anthropic API Key", type="password", key="anthropic_key_input")
+    if anthropic_key:
+        st.session_state.ANTHROPIC_API_KEY = anthropic_key
+        st.sidebar.success("Anthropic API key set!")
+        st.rerun()
+    else:
+        st.sidebar.warning("⚠️ Anthropic API key is required. Please enter your API key above.")
+
+elif selected_provider == "OpenAI" and not ai_available["openai"]:
+    openai_key = st.sidebar.text_input("OpenAI API Key", type="password", key="openai_key_input")
+    if openai_key:
+        st.session_state.OPENAI_API_KEY = openai_key
+        st.sidebar.success("OpenAI API key set!")
+        st.rerun()
+    else:
+        st.sidebar.warning("⚠️ OpenAI API key is required. Please enter your API key above.")
 
 # Generate Button
 if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
@@ -158,13 +203,17 @@ if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
         st.session_state.current_data = data
         st.session_state.trend_analysis = analyze_trend_data(data)
         
+        # Get the selected AI provider in lowercase
+        provider = st.session_state.selected_provider.lower()
+        provider_available = ai_available.get(provider, False)
+        
         # Generate content ideas
-        if ai_available["anthropic"]:
+        if provider_available:
             content_ideas = generate_content_ideas_with_ai(
                 st.session_state.selected_platform, 
                 st.session_state.selected_metric,
                 st.session_state.trend_analysis,
-                api_provider="anthropic"
+                api_provider=provider
             )
             st.session_state.content_ideas = content_ideas
             
@@ -181,7 +230,7 @@ if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
                 )
             }
             st.session_state.content_ideas = content_ideas
-            st.sidebar.warning("Using built-in content ideas (AI unavailable)")
+            st.sidebar.warning(f"Using built-in content ideas ({provider} AI unavailable)")
 
 # Settings section
 st.sidebar.header("Settings")
@@ -200,9 +249,12 @@ with st.sidebar.expander("About"):
     tailored to specific platforms. Our AI analyzes thousands of trending posts
     to suggest content that will resonate with your audience.
     
-    Built with Streamlit and powered by Anthropic Claude AI.
+    Built with Streamlit and powered by multiple AI providers:
+    - Google's Gemini AI
+    - Anthropic's Claude
+    - OpenAI's GPT models
     
-    Version: 2.0.0
+    Version: 2.1.0
     """)
 
 # Main content area
