@@ -142,54 +142,15 @@ selected_industry = st.sidebar.selectbox("Industry (Optional)", ["Any"] + indust
 ai_available = check_ai_availability()
 st.session_state.api_available = ai_available
 
-# AI Provider selection
-ai_providers = ["Gemini", "Anthropic", "OpenAI"]
-available_providers = []
-
-if ai_available["gemini"]:
-    available_providers.append("Gemini")
-if ai_available["anthropic"]:
-    available_providers.append("Anthropic")
-if ai_available["openai"]:
-    available_providers.append("OpenAI")
-
-if 'selected_provider' not in st.session_state or st.session_state.selected_provider not in ai_providers:
+# Set Gemini as the default AI provider (hidden from UI)
+if 'selected_provider' not in st.session_state:
     st.session_state.selected_provider = "Gemini"  # Default to Gemini
 
-selected_provider = st.sidebar.selectbox(
-    "AI Provider",
-    options=ai_providers,
-    index=ai_providers.index(st.session_state.selected_provider)
-)
-st.session_state.selected_provider = selected_provider
-
-# API Key entry
-if selected_provider == "Gemini" and not ai_available["gemini"]:
-    gemini_key = st.sidebar.text_input("Google Gemini API Key", type="password", key="gemini_key_input")
-    if gemini_key:
-        st.session_state.GEMINI_API_KEY = gemini_key
-        st.sidebar.success("Gemini API key set!")
-        st.rerun()
-    else:
-        st.sidebar.warning("⚠️ Gemini API key is required. Please enter your API key above.")
-
-elif selected_provider == "Anthropic" and not ai_available["anthropic"]:
-    anthropic_key = st.sidebar.text_input("Anthropic API Key", type="password", key="anthropic_key_input")
-    if anthropic_key:
-        st.session_state.ANTHROPIC_API_KEY = anthropic_key
-        st.sidebar.success("Anthropic API key set!")
-        st.rerun()
-    else:
-        st.sidebar.warning("⚠️ Anthropic API key is required. Please enter your API key above.")
-
-elif selected_provider == "OpenAI" and not ai_available["openai"]:
-    openai_key = st.sidebar.text_input("OpenAI API Key", type="password", key="openai_key_input")
-    if openai_key:
-        st.session_state.OPENAI_API_KEY = openai_key
-        st.sidebar.success("OpenAI API key set!")
-        st.rerun()
-    else:
-        st.sidebar.warning("⚠️ OpenAI API key is required. Please enter your API key above.")
+# Display AI service info
+if ai_available["gemini"]:
+    st.sidebar.success("✅ Gemini AI integration active")
+else:
+    st.sidebar.warning("⚠️ Gemini AI unavailable. Using fallback content ideas.")
 
 # Generate Button
 if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
