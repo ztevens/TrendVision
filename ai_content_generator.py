@@ -175,8 +175,22 @@ def generate_with_anthropic(platform, metric, trend_data, api_key):
             "ideas": get_fallback_ideas(platform, metric)
         }
     except Exception as e:
-        logger.error(f"Error with Anthropic: {str(e)}")
-        raise
+        error_message = str(e)
+        logger.error(f"Error with Anthropic: {error_message}")
+        
+        # Check for specific error types
+        if "credit balance is too low" in error_message:
+            return {
+                "status": "error",
+                "message": "The Anthropic API account has insufficient credits. Please contact support to upgrade the API plan.",
+                "ideas": get_fallback_ideas(platform, metric)
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Error with Anthropic API: {error_message}",
+                "ideas": get_fallback_ideas(platform, metric)
+            }
 
 def extract_json_from_text(text):
     """Extract JSON content from text that might contain explanation before/after the JSON."""

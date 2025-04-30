@@ -17,7 +17,7 @@ from utils import apply_theme
 from data_sources import load_data_sources, get_data_from_source
 from data_processor import filter_data
 from trend_analyzer import analyze_trend_data
-from ai_content_generator import generate_content_ideas_with_ai, check_ai_availability
+from ai_content_generator import generate_content_ideas_with_ai, check_ai_availability, get_fallback_ideas
 
 # Set page config
 st.set_page_config(
@@ -142,6 +142,10 @@ selected_industry = st.sidebar.selectbox("Industry (Optional)", ["Any"] + indust
 ai_available = check_ai_availability()
 st.session_state.api_available = ai_available
 
+# API Key Warning
+if not ai_available["anthropic"]:
+    st.sidebar.warning("⚠️ Anthropic API key is required for AI content generation. Please contact support.")
+
 # Generate Button
 if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
     # Simulate loading data from backend - this would normally be handled invisibly
@@ -165,9 +169,19 @@ if st.sidebar.button("✨ Generate Ideas", use_container_width=True):
             st.session_state.content_ideas = content_ideas
             
             if content_ideas.get("status") != "success":
-                st.sidebar.error("Error generating content ideas. Please try again.")
+                st.sidebar.error(content_ideas.get("message", "Error generating content ideas. Please try again."))
         else:
-            st.sidebar.error("AI service is not available. Please check your settings.")
+            # Still generate fallback ideas even without API key
+            content_ideas = {
+                "status": "success",
+                "message": "Generated using built-in template (AI unavailable)",
+                "ideas": get_fallback_ideas(
+                    st.session_state.selected_platform, 
+                    st.session_state.selected_metric
+                )
+            }
+            st.session_state.content_ideas = content_ideas
+            st.sidebar.warning("Using built-in content ideas (AI unavailable)")
 
 # Settings section
 st.sidebar.header("Settings")
